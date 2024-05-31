@@ -30,6 +30,7 @@ router.post("/signup", async (req, res) => {
         const { success } = signupBody.safeParse(req.body)
         if (!success) {
             return res.status(411).json({
+                success: false,
                 message: "Incorrect Inputs"
             })
         }
@@ -40,6 +41,7 @@ router.post("/signup", async (req, res) => {
 
         if (existingUser) {
             return res.status(411).json({
+                success: false,
                 message: "Email already taken"
             })
         }
@@ -62,6 +64,7 @@ router.post("/signup", async (req, res) => {
         })
 
         res.json({
+            success: true,
             message: "User created successfully",
             token: token
         })
@@ -76,6 +79,7 @@ router.post("/signin", async (req, res) => {
         const { success } = signinBody.safeParse(req.body)
         if (!success) {
             res.status(411).json({
+                success: false,
                 message: "Invalid Inputs"
             })
         }
@@ -90,12 +94,14 @@ router.post("/signin", async (req, res) => {
                 userId: user._id
             }, process.env.JWT_SECRET)
 
-            res.json({
+            res.status(200).json({
+                success: true,
                 token: token,
             })
             return;
         }
         res.status(411).json({
+            success: false,
             message: "Error while loggin in"
         })
     } catch (error) {
@@ -109,6 +115,7 @@ router.put("/", authMiddleware, async (req, res) => {
 
         if (!success) {
             res.status(411).json({
+                success: false,
                 message: "Invalid Inputs"
             })
         }
@@ -116,6 +123,7 @@ router.put("/", authMiddleware, async (req, res) => {
         await User.updateOne({ _id: req.userId }, req.body);
 
         res.status(200).json({
+            success: true,
             message: "Updated Successfully"
         })
 
@@ -143,6 +151,7 @@ router.get("/bulk", async (req, res) => {
         })
 
         res.status(200).json({
+            success: true,
             user: users.map(user => ({
                 username: user.username,
                 firstName: user.firstName,

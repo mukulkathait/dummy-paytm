@@ -19,6 +19,7 @@ router.get('/balance', authMiddleware, async (req, res) => {
         })
 
         res.status(200).json({
+            success: true,
             balance: account.balance
         })
     } catch (error) {
@@ -34,6 +35,7 @@ router.post('/transfer', authMiddleware, async (req, res) => {
         const { success } = transferBalBody.safeParse(req.body)
         if (!success) {
             res.status(411).json({
+                success: false,
                 message: "Invalid Inputs"
             })
         }
@@ -45,6 +47,7 @@ router.post('/transfer', authMiddleware, async (req, res) => {
         if (senderAccountInfo.balance < req.body.amount) {
             await session.abortTransaction();
             res.status(400).json({
+                success: false,
                 message: "Insufficient balance"
             })
         }
@@ -56,6 +59,7 @@ router.post('/transfer', authMiddleware, async (req, res) => {
         if (!receiverAccountInfo) {
             await session.abortTransaction();
             res.status(400).json({
+                success: false,
                 message: "Invalid Account"
             })
         }
@@ -75,6 +79,7 @@ router.post('/transfer', authMiddleware, async (req, res) => {
         session.endSession()
 
         res.status(200).json({
+            success: true,
             message: "Transfered Successfully"
         })
 
