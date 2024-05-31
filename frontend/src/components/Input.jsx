@@ -6,7 +6,7 @@ function Input({
   id,
   className = "",
   labelClassName = "",
-  inputClassName,
+  inputClassName = "",
   ...props
 }) {
   return (
