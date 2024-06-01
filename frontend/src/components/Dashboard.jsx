@@ -3,33 +3,15 @@ import Input from "./Input";
 import Button from "./Button";
 import axios from "axios";
 
-const client = axios.create({
-  baseURL: "http://localhost:3000/api/v1/user",
-});
-
-const userAccount = axios.create({
-  baseURL: "http://localhost:3000/api/v1/account",
-});
-
 function Dashboard() {
   const [balance, setBalance] = useState();
   const [users, setUsers] = useState([]);
 
-  const extractAllUsers = async () => {
-    try {
-      const response = await client.get("/bulk");
-      if (response.data.success) {
-        setUsers(response.data.user);
-      }
-    } catch (error) {
-      console.log("Error while extracting all users");
-      throw error;
-    }
-  };
-
   const extractUser = async () => {
     try {
-      const response = await userAccount.get("/balance");
+      const response = await axios.get(
+        "http://localhost:3000/api/v1/account/balance"
+      );
       if (response.data.success) {
         setBalance(response.data.balance);
       }
@@ -39,13 +21,34 @@ function Dashboard() {
     }
   };
 
-  useEffect(() => {
+  const extractAllUsers = async () => {
     try {
-      extractUser();
-      extractAllUsers();
+      const response = await axios.get(
+        "http://localhost:3000/api/v1/user/bulk"
+      );
+      if (response.data.success) {
+        setUsers(response.data.user);
+      }
     } catch (error) {
-      console.log("ERROR: ", error);
+      console.log("Error while extracting all users");
+      throw error;
     }
+  };
+
+  useEffect(() => {
+    axios.interceptors.request.use(
+      (client) => {
+        const token = localStorage.getItem("authToken");
+        if (token) client.headers.Authorization = `Bearer ${token}`;
+        return client;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
+
+    extractUser();
+    extractAllUsers();
   }, []);
 
   return (

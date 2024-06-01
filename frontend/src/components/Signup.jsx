@@ -27,6 +27,9 @@ function Signup() {
     try {
       const response = await client.post("/signup", userSignupInfo);
       if (response.data.success) {
+        dispatch(login({ userData: response.data.success }));
+        const token = response.data.token;
+        localStorage.setItem("authToken", token);
         navigate("/dashboard");
       }
     } catch (error) {

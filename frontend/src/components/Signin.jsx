@@ -3,6 +3,8 @@ import Input from "./Input";
 import Button from "./Button";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useDispatch } from "react-redux";
+import { login } from "../store/authSlice";
 
 const client = axios.create({
   baseURL: "http://localhost:3000/api/v1/user",
@@ -10,6 +12,7 @@ const client = axios.create({
 
 function Signin() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [userSigninInfo, setUserSigninInfo] = useState({
     username: "",
@@ -22,6 +25,9 @@ function Signin() {
     try {
       const response = await client.post("/signin", userSigninInfo);
       if (response.data.success) {
+        dispatch(login({ userData: response.data.success }));
+        const token = response.data.token;
+        localStorage.setItem("authToken", token);
         navigate("/dashboard");
       }
     } catch (error) {
