@@ -27,10 +27,13 @@ function Signup() {
     try {
       const response = await client.post("/signup", userSignupInfo);
       if (response.data.success) {
-        dispatch(login({ userData: response.data.success }));
+        dispatch(login({ userData: response.data.userData }));
+        console.log("Dispatched");
         const token = response.data.token;
         localStorage.setItem("authToken", token);
+        console.log("token in localstorage");
         navigate("/dashboard");
+        console.log("Navigated");
       }
     } catch (error) {
       console.log("Error during user signup: ", error);
@@ -96,7 +99,7 @@ function Signup() {
             value={userSignupInfo.password}
             onChange={handleChange}
           />
-          <Button type="submit" name="Signup" classname={"mt-4"} />
+          <Button type="submit" name="Signup" className={"mt-4"} />
         </form>
         <div className="mt-2">
           Already have an account?{" "}

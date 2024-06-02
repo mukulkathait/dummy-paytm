@@ -1,21 +1,43 @@
-import React, { useState, useEffect, useId } from "react";
+import React, { useState, useEffect, useCallback, useId } from "react";
 import Input from "./Input";
 import Button from "./Button";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  activeTransaction,
+  inactiveTransaction,
+} from "../store/transferSlice.js";
+
+const client = axios.create({
+  baseURL: "http://localhost:3000/api/v1",
+});
+
+client.interceptors.request.use(
+  (client) => {
+    const token = localStorage.getItem("authToken");
+    if (token) client.headers.Authorization = `Bearer ${token}`;
+    return client;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 function Dashboard() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [balance, setBalance] = useState();
   const [users, setUsers] = useState([]);
   const [filter, setFilter] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const extractUser = async () => {
+  const userInfo = useSelector((state) => state.auth.userData);
+
+  const extractUserBalance = async () => {
     try {
-      const response = await axios.get(
-        "http://localhost:3000/api/v1/account/balance"
-      );
+      const response = await client.get("/account/balance");
       if (response.data.success) {
         setBalance(response.data.balance);
       }
@@ -25,11 +47,9 @@ function Dashboard() {
     }
   };
 
-  const extractAllUsers = async (filter) => {
+  const extractUsers = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `http://localhost:3000/api/v1/user/bulk?filter=${filter}`
-      );
+      const response = await client.get(`/user/bulk?filter=${filter}`);
       if (response.data.success) {
         setUsers(response.data.user);
       }
@@ -37,38 +57,32 @@ function Dashboard() {
       console.log("Error while extracting all users");
       throw error;
     }
-  };
+  }, [filter]);
 
   useEffect(() => {
-    axios.interceptors.request.use(
-      (client) => {
-        const token = localStorage.getItem("authToken");
-        if (token) client.headers.Authorization = `Bearer ${token}`;
-        return client;
-      },
-      (error) => {
-        return Promise.reject(error);
-      }
-    );
-
-    extractUser();
-    extractAllUsers(filter);
+    setLoading(true);
+    extractUserBalance();
+    extractUsers();
+    setLoading(false);
+    dispatch(inactiveTransaction());
   }, []);
 
   useEffect(() => {
     const filterTimeout = setTimeout(() => {
-      extractAllUsers(filter);
+      extractUsers(filter);
     }, 500);
 
     return () => {
       clearTimeout(filterTimeout);
     };
-  }, [filter]);
+  }, [filter, extractUsers]);
 
-  const handleSubmit = async (user) => {
+  const handleSubmit = async (e, user) => {
+    e.preventDefault();
     try {
+      dispatch(activeTransaction({ userData: user }));
       //pass
-      navigate((to = "/send"));
+      navigate("/send");
     } catch (error) {
       console.log("Error during money transfer: ", error);
     }
@@ -79,9 +93,9 @@ function Dashboard() {
       <header className="p-4 flex justify-between border-b border-solid border-slate-500">
         <div className="text-xl font-extrabold">Payments App</div>
         <div className="flex gap-4">
-          <div>Hello, User</div>
+          <div>Hello, {userInfo.username}</div>
           <div className="w-7 bg-slate-400 rounded-full grid place-content-center">
-            U
+            {userInfo.username[0].toUpperCase()}
           </div>
         </div>
       </header>
@@ -96,27 +110,33 @@ function Dashboard() {
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
-        {users.map((user) => (
-          <form
-            onSubmit={() => handleSubmit(user)}
-            key={user.username}
-            className="w-3/4 h-12 mx-auto flex flex-row mt-2 bg-slate-200 rounded-lg items-center hover:border hover:border-solid hover:border-gray-500"
-          >
-            <div className="flex flex-row gap-2 items-center ml-1">
-              <div className="h-8 w-8 bg-slate-400 rounded-full grid place-content-center">
-                {user.firstName[0].toUpperCase()}
+        {loading ? (
+          <div className="w-3/4 mx-auto text-center text-lg text-slate-400">
+            <i>Loading...</i>
+          </div>
+        ) : (
+          users.map((user) => (
+            <form
+              onSubmit={(e) => handleSubmit(e, user)}
+              key={user.username}
+              className="w-3/4 h-12 mx-auto flex flex-row mt-2 bg-slate-200 rounded-lg items-center hover:border hover:border-solid hover:border-gray-500"
+            >
+              <div className="flex flex-row gap-2 items-center ml-1">
+                <div className="h-8 w-8 bg-slate-400 rounded-full grid place-content-center">
+                  {user.firstName[0].toUpperCase()}
+                </div>
+                <div className="text-md grid place-content-center">
+                  {user.username}
+                </div>
               </div>
-              <div className="text-md grid place-content-center">
-                {user.username}
-              </div>
-            </div>
-            <Button
-              classname={"max-w-fit mr-1 max-h-10 px-4"}
-              type="submit"
-              name="Send Money"
-            />
-          </form>
-        ))}
+              <Button
+                className={"max-w-fit mr-1 max-h-10 px-4"}
+                type="submit"
+                name="Send Money"
+              />
+            </form>
+          ))
+        )}
       </main>
     </div>
   );

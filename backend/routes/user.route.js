@@ -63,12 +63,19 @@ router.post("/signup", async (req, res) => {
             balance: 1 + Math.random() * 10000
         })
 
-        res.json({
-            success: true,
-            message: "User created successfully",
-            token: token
+        const userData = await User.findOne({
+            _id: userId
         })
+        console.log("UserData generated after SIGNUP: ", userData)
 
+        if (userData) {
+            res.json({
+                success: true,
+                message: "User created successfully",
+                token: token,
+                userData
+            })
+        }
     } catch (error) {
         console.log("Error during user signup: ", error)
     }
@@ -98,6 +105,7 @@ router.post("/signin", async (req, res) => {
                 success: true,
                 message: "User logged-in successfully",
                 token: token,
+                userData: user,
             })
             return;
         }
@@ -133,7 +141,7 @@ router.put("/", authMiddleware, async (req, res) => {
     }
 })
 
-router.get("/bulk", async (req, res) => {
+router.get("/bulk", authMiddleware, async (req, res) => {
     try {
         const filter = req.query.filter || "";
 

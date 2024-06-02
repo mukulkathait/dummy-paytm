@@ -25,7 +25,7 @@ function Signin() {
     try {
       const response = await client.post("/signin", userSigninInfo);
       if (response.data.success) {
-        dispatch(login({ userData: response.data.success }));
+        dispatch(login({ userData: response.data.userData }));
         const token = response.data.token;
         localStorage.setItem("authToken", token);
         navigate("/dashboard");
@@ -72,7 +72,7 @@ function Signin() {
             value={userSigninInfo.password}
             onChange={handleChange}
           />
-          <Button type="submit" name="Signin" classname={"mt-4"} />
+          <Button type="submit" name="Signin" className={"mt-4"} />
         </form>
         <div className="mt-2 text-md">
           Don't have an account?{" "}

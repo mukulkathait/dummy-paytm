@@ -32,32 +32,43 @@ router.post('/transfer', authMiddleware, async (req, res) => {
     session.startTransaction();
 
     try {
-        const { success } = transferBalBody.safeParse(req.body)
-        if (!success) {
+        const parsedData = transferBalBody.safeParse(req.body)
+        if (!parsedData.success) {
+            await session.abortTransaction()
+            session.endSession();
             res.status(411).json({
                 success: false,
                 message: "Invalid Inputs"
             })
         }
 
-        const senderAccountInfo = await User.find({
-            userId: req.userId
-        })
+        const { to, amount } = parsedData.data;
 
-        if (senderAccountInfo.balance < req.body.amount) {
+        const presender = await Account.findOne({ userId: req.userId })
+        const prereceiver = await Account.findOne({ userId: to })
+        console.log("Previous Sender Balance: ", presender.balance)
+        console.log("Previous Receiver Balance: ", prereceiver.balance)
+
+        const senderAccountInfo = await Account.findOne({
+            userId: req.userId
+        }).session(session)
+
+        if (!senderAccountInfo || senderAccountInfo.balance < amount) {
             await session.abortTransaction();
+            session.endSession();
             res.status(400).json({
                 success: false,
                 message: "Insufficient balance"
             })
         }
 
-        const receiverAccountInfo = await User.find({
-            userId: req.body.to
-        })
+        const receiverAccountInfo = await Account.findOne({
+            userId: to
+        }).session(session)
 
         if (!receiverAccountInfo) {
             await session.abortTransaction();
+            session.endSession()
             res.status(400).json({
                 success: false,
                 message: "Invalid Account"
@@ -72,8 +83,8 @@ router.post('/transfer', authMiddleware, async (req, res) => {
         await receiverAccountInfo.save({ session }) */
 
         //Approach 2 for balance updation
-        await Account.updateOne({ userId: req.userId }, { $inc: { balance: -req.body.amount } }).session(session);
-        await Account.updateOne({ userId: req.to }, { $inc: { balance: req.body.amount } }).session(session);
+        await Account.updateOne({ userId: req.userId }, { $inc: { balance: -amount } }).session(session);
+        await Account.updateOne({ userId: to }, { $inc: { balance: amount } }).session(session);
 
         await session.commitTransaction();
         session.endSession()
@@ -83,10 +94,19 @@ router.post('/transfer', authMiddleware, async (req, res) => {
             message: "Transfered Successfully"
         })
 
+        const sender = await Account.findOne({ userId: req.userId })
+        const receiver = await Account.findOne({ userId: to })
+        console.log("Updated Sender Balance: ", sender.balance)
+        console.log("Updated Receiver Balance: ", receiver.balance)
+
     } catch (error) {
         await session.abortTransaction();
         session.endSession()
         console.log("Error during balance transfer: ", error)
+        res.status(500).json({
+            success: false,
+            message: "Server Error"
+        })
     }
 })
 
